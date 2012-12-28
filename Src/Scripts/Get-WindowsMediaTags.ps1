@@ -1,4 +1,4 @@
-﻿$root = "\\Server\Music\Artists\U2\All That You Can't Leave Behind"
+﻿$root = "\\Server\Music\Artists\U2"
 Get-ChildItem $root -Recurse -Include *.mp3 |
     foreach {
         $file = [TagLib.File]::Create($_)
