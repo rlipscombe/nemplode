@@ -11,20 +11,20 @@ Get-ChildItem $root -Recurse -Include *.mp3 |
                 switch -wildcard ($frame.Owner) {
                     "WM/Provider" {
                         # WM/Provider is UTF-16 text.
-                        @{ Owner = $frame.Owner; Value = [System.Text.Encoding]::Unicode.GetString($frame.PrivateData.Data) }
+                        @{ $_ = [System.Text.Encoding]::Unicode.GetString($frame.PrivateData.Data) }
                     }
                     "WM/MediaClass*" {
-                        @{ Owner = $frame.Owner; Value = [guid] $frame.PrivateData.Data }
+                        @{ $_ = [guid] $frame.PrivateData.Data }
                     }
-                    { $_ -eq "WM/ContentID" -or $_ -eq "WM/CollectionID" -or $_ -eq "WM/CollectionGroupID" } {
-                        [guid] $frame.PrivateData.Data
+                    { ($_ -eq "WM/WMContentID") -or ($_ -eq "WM/WMCollectionID") -or ($_ -eq "WM/WMCollectionGroupID") } {
+                        @{ $_ = [guid] $frame.PrivateData.Data }
                     }
                     "WM/UniqueFileIdentifier" {
                         # WM/UniqueFileIdentifier is UTF-16 text.
-                        @{ Owner = $frame.Owner; Value = [System.Text.Encoding]::Unicode.GetString($frame.PrivateData.Data) }
+                        @{ $_ = [System.Text.Encoding]::Unicode.GetString($frame.PrivateData.Data) }
                     }
                     default {
-                        @{ Owner = $frame.Owner; Length = $frame.PrivateData.Data.Length; Data = $frame.PrivateData.Data }
+                        @{ $_ = $frame.PrivateData.Data }
                     }
                 }
             }
