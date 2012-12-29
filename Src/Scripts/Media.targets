@@ -9,24 +9,40 @@
   <!-- Attach the desired destination to the files to be encoded. -->
   <ItemGroup>
     <_Encode Include="@(Encode)">
-      <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3</Destination>
+      <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).flac</Destination>
     </_Encode>
-  </ItemGroup>
 
-  <Target Name="Help">
-    <Message Text="msbuild /nologo /v:m /p:SourceRoot=D:\Rips\Wav /p:DestinationRoot=D:\Rips\Flac /t:EncodeMusic" />
-  </Target>
+    <_Convert Include="@(Convert)">
+      <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3</Destination>
+    </_Convert>
+  </ItemGroup>
   
-  <!-- Do the encoding. -->
-  <Target Name="EncodeMusic" DependsOnTargets="_EnsureOutputFolder" Inputs="@(_Encode)" Outputs="%(Destination)" Condition="">
+  <!-- Convert WAV to FLAC. -->
+  <Target Name="EncodeMusic" DependsOnTargets="_EnsureFlacOutputFolder" Inputs="@(_Encode)" Outputs="%(Destination)">
     <Message Text="Encoding &quot;@(_Encode)&quot; to &quot;%(_Encode.Destination)&quot;" />
-    <Exec Command="$(FLAC) --silent --best -o &quot;%(_Encode.Destination)&quot; &quot;@(_Encode)&quot;" />
+    <Exec Command="$(FLAC) --silent --best --force -o &quot;%(_Encode.Destination)&quot; &quot;@(_Encode)&quot;" />
     
-    <!-- FLAC sets the modification time to the time of the source file; this causes MSBuild to run it again. -->
+    <!-- FLAC sets the modification time to the time of the source file; this causes MSBuild to run it again; we don't want that. -->
     <Touch Files="%(_Encode.Destination)" />
   </Target>
 
-  <Target Name="_EnsureOutputFolder" Inputs="@(_Encode)" Outputs="$(DestinationRoot)\%(RecursiveDir)">
+  <!-- Convert FLAC to MP3. -->
+  <Target Name="ConvertMusic" DependsOnTargets="_EnsureMP3OutputFolder" Inputs="@(_Convert)" Outputs="%(Destination)">
+    <Message Text="Converting &quot;@(_Convert)&quot; to &quot;%(_Convert.Destination)&quot;" />
+    
+    <!-- Use flac.exe to decode the .flac file; pipe the output into lame.exe, reserving some space for the tags. -->
+    <Exec Command="$(FLAC) --silent --decode --stdout &quot;@(_Convert)&quot; | $(LAME) --silent --preset standard --id3v2-only --pad-id3v2-size 256 - &quot;%(_Convert.Destination)&quot;" />
+    
+    <!-- TODO: Copy the tags. -->
+
+    <Touch Files="%(_Convert.Destination)" />
+  </Target>
+
+  <Target Name="_EnsureFlacOutputFolder" Inputs="@(_Encode)" Outputs="$(DestinationRoot)\%(RecursiveDir)">
     <MakeDir Directories="$(DestinationRoot)\%(_Encode.RecursiveDir)" />
+  </Target>
+
+  <Target Name="_EnsureMP3OutputFolder" Inputs="@(_Convert)" Outputs="$(DestinationRoot)\%(RecursiveDir)">
+    <MakeDir Directories="$(DestinationRoot)\%(_Convert.RecursiveDir)" />
   </Target>
 </Project>
