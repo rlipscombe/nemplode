@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <LAME>"C:\Program Files (x86)\LAME\lame.exe"</LAME>
+    <FLAC>"C:\Program Files (x86)\Flac\bin\flac.exe"</FLAC>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <_Encode Include="@(Encode)">
+      <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3</Destination>
+    </_Encode>
+  </ItemGroup>
+
+  <Target Name="EncodeMusic" Inputs="@(_Encode)" Outputs="%(Destination)">
+    <Message Text="Encoding &quot;@(_Encode)&quot; to &quot;%(_Encode.Destination)&quot;" />
+  </Target>
+</Project>
