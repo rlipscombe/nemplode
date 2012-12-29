@@ -1,5 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <UsingTask TaskName="CopyMediaTags" AssemblyFile="..\Build\MSBuild.Media.Tasks\bin\Debug\MSBuild.Media.Tasks.dll" />
+
   <!-- Where do LAME and FLAC live? -->
   <PropertyGroup>
     <LAME>"C:\Program Files (x86)\LAME\lame.exe"</LAME>
@@ -10,15 +12,22 @@
   <ItemGroup>
     <_Encode Include="@(Encode)">
       <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).flac</Destination>
+      <Temporary>$(DestinationRoot)\%(RecursiveDir)~%(Filename).flac</Temporary>
     </_Encode>
 
     <_Convert Include="@(Convert)">
       <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3</Destination>
+      <Temporary>$(DestinationRoot)\%(RecursiveDir)~%(Filename).mp3</Temporary>
     </_Convert>
+
+    <_TemporaryFiles Include="@(_Encode -> '%(Temporary)')" />
+    <_TemporaryFiles Include="@(_Convert -> '%(Temporary)')" />
   </ItemGroup>
+
+  <Target Name="Clean" DependsOnTargets="_CleanTemporaryFiles" />
   
   <!-- Convert WAV to FLAC. -->
-  <Target Name="EncodeMusic" DependsOnTargets="_EnsureFlacOutputFolder" Inputs="@(_Encode)" Outputs="%(Destination)">
+  <Target Name="EncodeMusic" DependsOnTargets="_EnsureOutputFolder;_CleanTemporaryFiles" Inputs="@(_Encode)" Outputs="%(Destination)">
     <Message Text="Encoding &quot;@(_Encode)&quot; to &quot;%(_Encode.Destination)&quot;" />
     <Exec Command="$(FLAC) --silent --best --force -o &quot;%(_Encode.Destination)&quot; &quot;@(_Encode)&quot;" />
     
@@ -27,22 +36,35 @@
   </Target>
 
   <!-- Convert FLAC to MP3. -->
-  <Target Name="ConvertMusic" DependsOnTargets="_EnsureMP3OutputFolder" Inputs="@(_Convert)" Outputs="%(Destination)">
+  <Target Name="ConvertMusic" DependsOnTargets="_CleanTemporaryFiles;_EnsureOutputFolder" Inputs="@(_Convert)" Outputs="%(Destination)">
     <Message Text="Converting &quot;@(_Convert)&quot; to &quot;%(_Convert.Destination)&quot;" />
     
     <!-- Use flac.exe to decode the .flac file; pipe the output into lame.exe, reserving some space for the tags. -->
-    <Exec Command="$(FLAC) --silent --decode --stdout &quot;@(_Convert)&quot; | $(LAME) --silent --preset standard --id3v2-only --pad-id3v2-size 256 - &quot;%(_Convert.Destination)&quot;" />
-    
-    <!-- TODO: Copy the tags. -->
+    <Exec Command="$(FLAC) --silent --decode --stdout &quot;@(_Convert)&quot; | $(LAME) --silent --preset standard --id3v2-only --pad-id3v2-size 256 - &quot;%(_Convert.Temporary)&quot;" />
 
+    <CopyMediaTags SourceFile="@(_Convert)" DestinationFile="%(_Convert.Temporary)" />
+
+    <Move SourceFiles="%(_Convert.Temporary)" DestinationFiles="%(_Convert.Destination)" OverwriteReadonlyFiles="true" />
     <Touch Files="%(_Convert.Destination)" />
+
+    <OnError ExecuteTargets="ConvertMusicFailed"/>
   </Target>
 
-  <Target Name="_EnsureFlacOutputFolder" Inputs="@(_Encode)" Outputs="$(DestinationRoot)\%(RecursiveDir)">
-    <MakeDir Directories="$(DestinationRoot)\%(_Encode.RecursiveDir)" />
+  <Target Name="ConvertMusicFailed">
+    <Delete Files="@(_TemporaryFiles)" />
   </Target>
 
-  <Target Name="_EnsureMP3OutputFolder" Inputs="@(_Convert)" Outputs="$(DestinationRoot)\%(RecursiveDir)">
-    <MakeDir Directories="$(DestinationRoot)\%(_Convert.RecursiveDir)" />
+  <Target Name="_CleanTemporaryFiles">
+    <Delete Files="@(_TemporaryFiles)" />
+  </Target>
+  
+  <Target Name="_EnsureOutputFolder">
+    <ItemGroup>
+      <_OutputFolders Include="@(_Encode);@(_Convert)">
+        <Folder>$(DestinationRoot)\%(RecursiveDir)</Folder>
+      </_OutputFolders>
+    </ItemGroup>
+
+    <MakeDir Directories="%(_OutputFolders.Folder)" />
   </Target>
 </Project>
