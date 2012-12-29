@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0" DefaultTargets="Default">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0" DefaultTargets="Help">
   <PropertyGroup>
     <SourceRoot>D:\Rips</SourceRoot>
     <DestinationRoot>D:\Temp\Music3</DestinationRoot>
@@ -11,6 +11,4 @@
   </ItemGroup>
 
   <Import Project="Media.targets" />
-
-  <Target Name="Default" DependsOnTargets="EncodeMusic"/>
 </Project>

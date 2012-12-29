@@ -1,17 +1,32 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <!-- Where do LAME and FLAC live? -->
   <PropertyGroup>
     <LAME>"C:\Program Files (x86)\LAME\lame.exe"</LAME>
     <FLAC>"C:\Program Files (x86)\Flac\bin\flac.exe"</FLAC>
   </PropertyGroup>
 
+  <!-- Attach the desired destination to the files to be encoded. -->
   <ItemGroup>
     <_Encode Include="@(Encode)">
       <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3</Destination>
     </_Encode>
   </ItemGroup>
 
-  <Target Name="EncodeMusic" Inputs="@(_Encode)" Outputs="%(Destination)">
+  <Target Name="Help">
+    <Message Text="msbuild /nologo /v:m /p:SourceRoot=D:\Rips\Wav /p:DestinationRoot=D:\Rips\Flac /t:EncodeMusic" />
+  </Target>
+  
+  <!-- Do the encoding. -->
+  <Target Name="EncodeMusic" DependsOnTargets="_EnsureOutputFolder" Inputs="@(_Encode)" Outputs="%(Destination)" Condition="">
     <Message Text="Encoding &quot;@(_Encode)&quot; to &quot;%(_Encode.Destination)&quot;" />
+    <Exec Command="$(FLAC) --silent --best -o &quot;%(_Encode.Destination)&quot; &quot;@(_Encode)&quot;" />
+    
+    <!-- FLAC sets the modification time to the time of the source file; this causes MSBuild to run it again. -->
+    <Touch Files="%(_Encode.Destination)" />
+  </Target>
+
+  <Target Name="_EnsureOutputFolder" Inputs="@(_Encode)" Outputs="$(DestinationRoot)\%(RecursiveDir)">
+    <MakeDir Directories="$(DestinationRoot)\%(_Encode.RecursiveDir)" />
   </Target>
 </Project>
