@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0" DefaultTargets="ConvertMusic">
   <PropertyGroup>
-    <SourceRoot>D:\Rips\Flac</SourceRoot>
-    <DestinationRoot>D:\Rips\MP3</DestinationRoot>
+    <SourceRoot>D:\Music</SourceRoot>
+    <DestinationRoot>E:\Music</DestinationRoot>
   </PropertyGroup>
 
   <ItemGroup>

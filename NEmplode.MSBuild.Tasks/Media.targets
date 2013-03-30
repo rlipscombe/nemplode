@@ -1,6 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
-  <UsingTask TaskName="CopyMediaTags" AssemblyFile="..\Build\MSBuild.Media.Tasks\bin\Debug\MSBuild.Media.Tasks.dll" />
+  <UsingTask TaskName="CopyMediaTags" AssemblyFile="MSBuild.Media.Tasks.dll" />
+  <UsingTask TaskName="Pipe" AssemblyFile="MSBuild.Media.Tasks.dll" />
+  <UsingTask TaskName="ExecProcess" AssemblyFile="MSBuild.Media.Tasks.dll" />
 
   <!-- Where do LAME and FLAC live? -->
   <PropertyGroup>
@@ -12,12 +14,14 @@
   <ItemGroup>
     <_Encode Include="@(Encode)">
       <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).flac</Destination>
-      <Temporary>$(DestinationRoot)\%(RecursiveDir)~%(Filename).flac</Temporary>
+      <Temporary>$(DestinationRoot)\%(RecursiveDir)%(Filename).flac.tmp</Temporary>
+      <MimeType>audio/flac</MimeType>
     </_Encode>
 
     <_Convert Include="@(Convert)">
       <Destination>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3</Destination>
-      <Temporary>$(DestinationRoot)\%(RecursiveDir)~%(Filename).mp3</Temporary>
+      <Temporary>$(DestinationRoot)\%(RecursiveDir)%(Filename).mp3.tmp</Temporary>
+      <MimeType>audio/mp3</MimeType>
     </_Convert>
 
     <_TemporaryFiles Include="@(_Encode -> '%(Temporary)')" />
@@ -29,7 +33,7 @@
   <!-- Convert WAV to FLAC. -->
   <Target Name="EncodeMusic" DependsOnTargets="_EnsureOutputFolder;_CleanTemporaryFiles" Inputs="@(_Encode)" Outputs="%(Destination)">
     <Message Text="Encoding &quot;@(_Encode)&quot; to &quot;%(_Encode.Destination)&quot;" />
-    <Exec Command="$(FLAC) --silent --best --force -o &quot;%(_Encode.Destination)&quot; &quot;@(_Encode)&quot;" />
+    <ExecProcess FileName="$(FLAC)" Arguments="--silent --best --force -o &quot;%(_Encode.Destination)&quot; &quot;@(_Encode)&quot;" />
     
     <!-- FLAC sets the modification time to the time of the source file; this causes MSBuild to run it again; we don't want that. -->
     <Touch Files="%(_Encode.Destination)" />
@@ -40,11 +44,12 @@
     <Message Text="Converting &quot;@(_Convert)&quot; to &quot;%(_Convert.Destination)&quot;" />
     
     <!-- Use flac.exe to decode the .flac file; pipe the output into lame.exe, reserving some space for the tags. -->
-    <Exec Command="$(FLAC) --silent --decode --stdout &quot;@(_Convert)&quot; | $(LAME) --silent --preset standard --id3v2-only --pad-id3v2-size 256 - &quot;%(_Convert.Temporary)&quot;" />
+    <Pipe SourceFileName="$(FLAC)" SourceArguments="--silent --decode --stdout &quot;@(_Convert)&quot;" 
+          DestinationFileName="$(LAME)" DestinationArguments="--silent --preset standard --id3v2-only --pad-id3v2-size 256 - &quot;%(_Convert.Temporary)&quot;" />
 
-    <CopyMediaTags SourceFile="@(_Convert)" DestinationFile="%(_Convert.Temporary)" />
+    <CopyMediaTags SourceFile="@(_Convert)" DestinationFile="%(_Convert.Temporary)" DestinationFileMimeType="%(_Convert.MimeType)" />
 
-    <Move SourceFiles="%(_Convert.Temporary)" DestinationFiles="%(_Convert.Destination)" OverwriteReadonlyFiles="true" />
+    <Move SourceFiles="%(_Convert.Temporary)" DestinationFiles="%(_Convert.Destination)" OverwriteReadOnlyFiles="true" />
     <Touch Files="%(_Convert.Destination)" />
 
     <OnError ExecuteTargets="ConvertMusicFailed"/>
