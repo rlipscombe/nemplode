@@ -17,74 +17,90 @@ namespace ConvertMusic
             const string sourceFileName = @"D:\Rips\Temp\01 - Divided By Night.flac";
             const string destinationFileName = @"D:\Rips\Temp\01 - Divided By Night.mp3";
 
-            const int sourceBufferSize = 163840;
-            const int encoderOutputBufferSize = 163840;
-            const int decoderOutputBufferSize = 163840;
+            // TODO: Progress.
 
+            var cancellationTokenSource = new CancellationTokenSource();
+            Console.CancelKeyPress += (sender, e) =>
+                {
+                    Console.WriteLine("^C");
+                    cancellationTokenSource.Cancel();
+                };
+            cancellationTokenSource.CancelAfter(TimeSpan.FromMinutes(5));
+
+            var cancel = cancellationTokenSource.Token;
             var decoderExited = new ManualResetEvent(false);
             var encoderExited = new ManualResetEvent(false);
 
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
-
             var decoder = new CodecProcess(decoderPath, decoderArguments);
-            decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
-            decoder.Exited += (sender, e) => { decoderExited.Set(); };
-            decoder.Start();
-
-            // Start reading from the source file. When this completes, we'll write to the decoder's input.
-            // Note that the decoder has to be started before you can get the stream.
-            var sourceToDecoder = new ProcessPipe("sourceToDecoder", source, decoder.InputStream, sourceBufferSize);
-            sourceToDecoder.Start();
-
             var encoder = new CodecProcess(encoderPath, encoderArguments);
-            encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
-            encoder.Exited += (sender, e) => { encoderExited.Set(); };
-            encoder.Start();
-
-            // Start reading from decoder output. When this completes, we'll write to the encoder's input.
-            var decoderToEncoder = new ProcessPipe("decoderToEncoder", decoder.OutputStream, encoder.InputStream, decoderOutputBufferSize);
-            decoderToEncoder.Start();
-
             var destination = File.Create(destinationFileName);
 
-            // Start reading from encoder output. When this completes, we'll write to the destination file.
-            var encoderToDestination = new ProcessPipe("encoderToDestination", encoder.OutputStream, destination, encoderOutputBufferSize);
+            // Note that the decoder has to be started before you can get the stream???
+            const int bufferSize = 163840;
+
+            var sourceToDecoder = new ProcessPipe("sourceToDecoder", source, decoder.InputStream, bufferSize);
+            var decoderToEncoder = new ProcessPipe("decoderToEncoder", decoder.OutputStream, encoder.InputStream, bufferSize);
+            var encoderToDestination = new ProcessPipe("encoderToDestination", encoder.OutputStream, destination, bufferSize);
+
+            decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
+            decoder.Exited += (sender, e) => decoderExited.Set();
+            decoder.Start();
+
+            encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
+            encoder.Exited += (sender, e) => encoderExited.Set();
+            encoder.Start();
+
+            sourceToDecoder.Start();
+            decoderToEncoder.Start();
             encoderToDestination.Start();
 
             // And now we wait until everything's stopped...
-            var waitHandles = new WaitHandle[]
+            var waitHandles = new[]
                 {
+                    cancel.WaitHandle,
                     decoderExited,
                     encoderExited
                 };
 
-            int done = 0;
-            while (done < 2)
+            int pending = 2;
+            while (pending != 0)
             {
                 var signal = WaitHandle.WaitAny(waitHandles);
                 switch (signal)
                 {
-                    case 0: // decoder exited.
+                    case 0: // timeout/cancel
                         {
-                            decoderToEncoder.Stop();
-                            decoderExited.Reset();
-                            ++done;
+                            sourceToDecoder.Abort();
+                            decoder.Abort();
+                            decoderToEncoder.Abort();
+                            encoder.Abort();
+                            encoderToDestination.Abort();
                         }
                         break;
 
-                    case 1: // encoder exited.
+                    case 1: // decoder exited.
+                        {
+                            // TODO: If the decoder has quit -- it should stop the connection?
+                            decoderToEncoder.Stop();
+                            decoderExited.Reset();
+                            --pending;
+                        }
+                        break;
+
+                    case 2: // encoder exited.
                         {
                             encoderToDestination.Stop();
                             encoderExited.Reset();
-                            ++done;
+                            --pending;
                         }
                         break;
                 }
             }
 
             // TODO: What if the codec failed?
-            // TODO: Cancel / Timeout / Flush error output.
+            // TODO: Flush error output.
         }
     }
 }
