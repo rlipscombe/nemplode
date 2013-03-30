@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using NEmplode.Async;
 
 namespace NEmplode.IO
 {

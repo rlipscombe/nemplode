@@ -41,8 +41,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Async\WaitableQueue.cs" />
+    <Compile Include="Codecs\DecoderNotRegisteredException.cs" />
+    <Compile Include="Codecs\EncoderNotRegisteredException.cs" />
     <Compile Include="Codecs\EncodingStream.cs" />
     <Compile Include="Codecs\DecodingStream.cs" />
+    <Compile Include="Codecs\FlacDecoder.cs" />
+    <Compile Include="Codecs\FlacDecoderStream.cs" />
+    <Compile Include="Codecs\FlacEncoder.cs" />
+    <Compile Include="Codecs\Mp3Decoder.cs" />
+    <Compile Include="Codecs\Mp3Encoder.cs" />
+    <Compile Include="Codecs\Mp3EncoderStream.cs" />
+    <Compile Include="Codecs\WavDecoder.cs" />
+    <Compile Include="Codecs\WavEncoder.cs" />
     <Compile Include="IO\CapturedProcess.cs" />
     <Compile Include="IO\Pipeline.cs" />
     <Compile Include="IO\ProcessExtensions.cs" />

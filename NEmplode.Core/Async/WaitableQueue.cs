@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace NEmplode.IO
+namespace NEmplode.Async
 {
     public class WaitableQueue<T> : IDisposable
     {
