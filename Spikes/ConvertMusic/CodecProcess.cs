@@ -20,7 +20,7 @@ namespace ConvertMusic
             _process.ErrorDataReceived += (sender, e) => OnErrorDataReceived(e);
             _process.Exited += (sender, e) =>
                 {
-                    _process.WaitForExit();
+                    _process.WaitForExit(1000);
                     _process.StandardOutput.Close();
 
                     OnExited();
@@ -84,6 +84,12 @@ namespace ConvertMusic
             DataReceivedEventHandler handler = ErrorDataReceived;
             if (handler != null)
                 handler(this, e);
+        }
+
+        public void Abort()
+        {
+            _process.Kill();
+            _process.WaitForExit(1000);
         }
     }
 }

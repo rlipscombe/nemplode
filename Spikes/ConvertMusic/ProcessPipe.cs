@@ -7,13 +7,11 @@ namespace ConvertMusic
     {
         private readonly byte[] _buffer;
 
-        private readonly string _name;
         private readonly Stream _source;
         private readonly Stream _destination;
 
-        public ProcessPipe(string name, Stream source, Stream destination, int bufferSize)
+        public ProcessPipe(Stream source, Stream destination, int bufferSize = 16384)
         {
-            _name = name;
             _source = source;
             _destination = destination;
             _buffer = new byte[bufferSize];
@@ -47,6 +45,12 @@ namespace ConvertMusic
         {
             _source.Close();
             _destination.Close();
+        }
+
+        public void Abort()
+        {
+            _source.Dispose();
+            _destination.Dispose();
         }
     }
 }

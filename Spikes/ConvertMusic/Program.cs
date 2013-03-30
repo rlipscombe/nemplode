@@ -28,8 +28,6 @@ namespace ConvertMusic
             cancellationTokenSource.CancelAfter(TimeSpan.FromMinutes(5));
 
             var cancel = cancellationTokenSource.Token;
-            var decoderExited = new ManualResetEvent(false);
-            var encoderExited = new ManualResetEvent(false);
 
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
@@ -37,23 +35,25 @@ namespace ConvertMusic
             var encoder = new CodecProcess(encoderPath, encoderArguments);
             var destination = File.Create(destinationFileName);
 
-            // Note that the decoder has to be started before you can get the stream???
-            const int bufferSize = 163840;
-
-            var sourceToDecoder = new ProcessPipe("sourceToDecoder", source, decoder.InputStream, bufferSize);
-            var decoderToEncoder = new ProcessPipe("decoderToEncoder", decoder.OutputStream, encoder.InputStream, bufferSize);
-            var encoderToDestination = new ProcessPipe("encoderToDestination", encoder.OutputStream, destination, bufferSize);
-
-            decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
+            var decoderExited = new ManualResetEvent(false);
             decoder.Exited += (sender, e) => decoderExited.Set();
+            decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
             decoder.Start();
 
-            encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
+            // Note that the process has to be started before you can get the stream,
+            // otherwise you get InvalidOperationException containing "StandardIn has not been redirected.".
+            var sourceToDecoder = new ProcessPipe(source, decoder.InputStream);
+            sourceToDecoder.Start();
+
+            var encoderExited = new ManualResetEvent(false);
             encoder.Exited += (sender, e) => encoderExited.Set();
+            encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
             encoder.Start();
 
-            sourceToDecoder.Start();
+            var decoderToEncoder = new ProcessPipe(decoder.OutputStream, encoder.InputStream);
             decoderToEncoder.Start();
+
+            var encoderToDestination = new ProcessPipe(encoder.OutputStream, destination);
             encoderToDestination.Start();
 
             // And now we wait until everything's stopped...
