@@ -7,8 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NEmplode.MSBuild.Tasks", "NEmplode.MSBuild.Tasks\NEmplode.MSBuild.Tasks.csproj", "{BB92F886-D719-4C72-BB7F-5454DD9D203F}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Spikes", "Spikes", "{ED465445-5BDF-4D53-A3AF-540891421949}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertMusic", "Spikes\ConvertMusic\ConvertMusic.csproj", "{D45B3BCD-731E-4755-9A1C-06F9D39D8019}"
@@ -21,10 +19,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BB92F886-D719-4C72-BB7F-5454DD9D203F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BB92F886-D719-4C72-BB7F-5454DD9D203F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BB92F886-D719-4C72-BB7F-5454DD9D203F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BB92F886-D719-4C72-BB7F-5454DD9D203F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D45B3BCD-731E-4755-9A1C-06F9D39D8019}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D45B3BCD-731E-4755-9A1C-06F9D39D8019}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D45B3BCD-731E-4755-9A1C-06F9D39D8019}.Release|Any CPU.ActiveCfg = Release|Any CPU

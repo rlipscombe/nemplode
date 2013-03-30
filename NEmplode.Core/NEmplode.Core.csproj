@@ -40,14 +40,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Async\WaitableQueue.cs" />
-    <Compile Include="Codecs\FlacDecoder.cs" />
     <Compile Include="IO\AsyncPipe.cs" />
     <Compile Include="IO\CapturedProcess.cs" />
     <Compile Include="IO\Pipeline.cs" />
     <Compile Include="IO\ProcessExtensions.cs" />
     <Compile Include="IO\ProcessOutputEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Async\" />
+    <Folder Include="Codecs\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

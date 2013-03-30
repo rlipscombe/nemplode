@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace ConvertMusic
 {
@@ -22,126 +21,70 @@ namespace ConvertMusic
             const int encoderOutputBufferSize = 163840;
             const int decoderOutputBufferSize = 163840;
 
+            var decoderExited = new ManualResetEvent(false);
+            var encoderExited = new ManualResetEvent(false);
+
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
 
-            var decoder = new Process
-                {
-                    StartInfo = GetProcessStartInfo(decoderPath, decoderArguments),
-                    EnableRaisingEvents = true
-                };
-
-            // Hook up the events. We don't hook up OutputDataReceived, because that wants to treat the data as strings; we need binary.
-            decoder.ErrorDataReceived += (sender, e) => Console.Error.WriteLine(e.Data);
-            decoder.Exited += (sender, e) => Console.WriteLine("decoder exited!");
-
-            // Start the process.
+            var decoder = new CodecProcess(decoderPath, decoderArguments);
+            decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
+            decoder.Exited += (sender, e) => { decoderExited.Set(); };
             decoder.Start();
-            decoder.BeginErrorReadLine();
 
             // Start reading from the source file. When this completes, we'll write to the decoder's input.
-            var sourceToDecoder = new OverlappedPipe("sourceToDecoder", source, decoder.StandardInput.BaseStream, sourceBufferSize);
+            // Note that the decoder has to be started before you can get the stream.
+            var sourceToDecoder = new ProcessPipe("sourceToDecoder", source, decoder.InputStream, sourceBufferSize);
             sourceToDecoder.Start();
 
-            var encoder = new Process
-                {
-                    StartInfo = GetProcessStartInfo(encoderPath, encoderArguments),
-                    EnableRaisingEvents = true
-                };
-
-            // Hook up the events. We don't hook up OutputDataReceived, because that wants to treat the data as strings; we need binary.
-            encoder.ErrorDataReceived += (sender, e) => Console.Error.WriteLine(e.Data);
-            encoder.Exited += (sender, e) => Console.WriteLine("encoder exited!");
-
-            // Start the process.
+            var encoder = new CodecProcess(encoderPath, encoderArguments);
+            encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
+            encoder.Exited += (sender, e) => { encoderExited.Set(); };
             encoder.Start();
-            encoder.BeginErrorReadLine();
 
             // Start reading from decoder output. When this completes, we'll write to the encoder's input.
-            var decoderToEncoder = new OverlappedPipe("decoderToEncoder", decoder.StandardOutput.BaseStream,
-                                                       encoder.StandardInput.BaseStream, decoderOutputBufferSize);
+            var decoderToEncoder = new ProcessPipe("decoderToEncoder", decoder.OutputStream, encoder.InputStream, decoderOutputBufferSize);
             decoderToEncoder.Start();
 
             var destination = File.Create(destinationFileName);
 
             // Start reading from encoder output. When this completes, we'll write to the destination file.
-            var encoderToDestination = new OverlappedPipe("encoderToDestination", encoder.StandardOutput.BaseStream, destination,
-                                                           encoderOutputBufferSize);
+            var encoderToDestination = new ProcessPipe("encoderToDestination", encoder.OutputStream, destination, encoderOutputBufferSize);
             encoderToDestination.Start();
 
             // And now we wait until everything's stopped...
-
-            // There's a bunch of interesting events to wait for at this point now.
-            Console.ReadLine();
-        }
-
-        private static ProcessStartInfo GetProcessStartInfo(string fileName, string arguments)
-        {
-            return new ProcessStartInfo
+            var waitHandles = new WaitHandle[]
                 {
-                    FileName = fileName,
-                    Arguments = arguments,
-
-                    // We don't want a visible window.
-                    CreateNoWindow = true,
-
-                    // In order to do redirection, we need to not use ShellExecute.
-                    UseShellExecute = false,
-
-                    // Redirect standard input. We'll be writing the WAV data into this.
-                    RedirectStandardInput = true,
-
-                    // Redirect standard output. This is what we're reading from.
-                    RedirectStandardOutput = true,
-
-                    // Redirect standard error, so that we can display it.
-                    RedirectStandardError = true,
+                    decoderExited,
+                    encoderExited
                 };
-        }
-    }
 
-    internal class OverlappedPipe
-    {
-        private readonly byte[] _buffer;
-
-        private readonly string _name;
-        private readonly Stream _source;
-        private readonly Stream _destination;
-
-        public OverlappedPipe(string name, Stream source, Stream destination, int bufferSize)
-        {
-            _name = name;
-            _source = source;
-            _destination = destination;
-            _buffer = new byte[bufferSize];
-        }
-
-        public void Start()
-        {
-            Console.WriteLine("{0}: Start: BeginRead", _name);
-            _source.BeginRead(_buffer, 0, _buffer.Length, ReadCallback, null);
-        }
-
-        private void ReadCallback(IAsyncResult ar)
-        {
-            int count = _source.EndRead(ar);
-            if (count != 0)
+            int done = 0;
+            while (done < 2)
             {
-                Console.WriteLine("{0}: ReadCallback: {1} byte(s): BeginWrite", _name, count);
-                _destination.BeginWrite(_buffer, 0, count, WriteCallback, null);
-            }
-            else
-            {
-                Console.WriteLine("{0}: ReadCallback: 0 byte(s): Close", _name);
-                _destination.Close();
-            }
-        }
+                var signal = WaitHandle.WaitAny(waitHandles);
+                switch (signal)
+                {
+                    case 0: // decoder exited.
+                        {
+                            decoderToEncoder.Stop();
+                            decoderExited.Reset();
+                            ++done;
+                        }
+                        break;
 
-        private void WriteCallback(IAsyncResult ar)
-        {
-            Console.WriteLine("{0}: WriteCallback: BeginRead", _name);
-            _destination.EndWrite(ar);
-            _source.BeginRead(_buffer, 0, _buffer.Length, ReadCallback, null);
+                    case 1: // encoder exited.
+                        {
+                            encoderToDestination.Stop();
+                            encoderExited.Reset();
+                            ++done;
+                        }
+                        break;
+                }
+            }
+
+            // TODO: What if the codec failed?
+            // TODO: Cancel / Timeout / Flush error output.
         }
     }
 }
