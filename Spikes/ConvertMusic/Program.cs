@@ -1,21 +1,34 @@
 ﻿using System;
+using System.Configuration;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace ConvertMusic
 {
-    static class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            const string decoderPath = @"C:\Program Files (x86)\Flac\bin\flac.exe";
-            const string decoderArguments = @"--silent --decode --stdout -";
+            if (args.Length != 2)
+            {
+                Console.WriteLine("ConvertMusic source-file destination-file");
+            }
 
-            const string encoderPath = @"C:\Program Files (x86)\LAME\lame.exe";
-            const string encoderArguments = @"--silent --preset standard --id3v2-only --pad-id3v2-size 256 - -";
+            // This ain't that simple, since MSBuild will insist on calling us with OEM code page filenames.
+            string sourceFileName = args[0];
+            string destinationFileName = args[1];
 
-            const string sourceFileName = @"D:\Rips\Temp\01 - Divided By Night.flac";
-            const string destinationFileName = @"D:\Rips\Temp\01 - Divided By Night.mp3";
+            // Is it worth doing content negotiation? That is:
+            // I have WAV, I want FLAC. FLAC takes WAV => OK.
+            // I have FLAC, I want MP3. MP3 takes WAV => how to get WAV from FLAC? => OK.
+
+            // Register the encoder/decoder
+            string decoderPath = ConfigurationManager.AppSettings["DecoderPath"];
+            string decoderArguments = ConfigurationManager.AppSettings["DecoderArguments"];
+
+            string encoderPath = ConfigurationManager.AppSettings["EncoderPath"];
+            string encoderArguments = ConfigurationManager.AppSettings["EncoderArguments"];
 
             // TODO: Progress.
 
@@ -24,10 +37,8 @@ namespace ConvertMusic
                 {
                     Console.WriteLine("^C");
                     cancellationTokenSource.Cancel();
+                    e.Cancel = true;
                 };
-            cancellationTokenSource.CancelAfter(TimeSpan.FromMinutes(5));
-
-            var cancel = cancellationTokenSource.Token;
 
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
@@ -35,72 +46,42 @@ namespace ConvertMusic
             var encoder = new CodecProcess(encoderPath, encoderArguments);
             var destination = File.Create(destinationFileName);
 
-            var decoderExited = new ManualResetEvent(false);
-            decoder.Exited += (sender, e) => decoderExited.Set();
+            var cancellationToken = cancellationTokenSource.Token;
+
+            const int bufferSize = 16384;
+
             decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
-            decoder.Start();
+            var decoderTask = decoder.Start(cancellationTokenSource.Token);
 
             // Note that the process has to be started before you can get the stream,
             // otherwise you get InvalidOperationException containing "StandardIn has not been redirected.".
-            var sourceToDecoder = new ProcessPipe(source, decoder.InputStream);
-            sourceToDecoder.Start();
+            var sourceToDecoderTask =
+                source.CopyToAsync(decoder.InputStream, bufferSize, cancellationToken)
+                      .ContinueWith(t => decoder.InputStream.Close());
 
-            var encoderExited = new ManualResetEvent(false);
-            encoder.Exited += (sender, e) => encoderExited.Set();
             encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
-            encoder.Start();
+            var encoderTask = encoder.Start(cancellationTokenSource.Token);
 
-            var decoderToEncoder = new ProcessPipe(decoder.OutputStream, encoder.InputStream);
-            decoderToEncoder.Start();
+            var decoderToEncoderTask =
+                decoder.OutputStream
+                       .CopyToAsync(encoder.InputStream, bufferSize, cancellationToken)
+                       .ContinueWith(t => encoder.InputStream.Close());
 
-            var encoderToDestination = new ProcessPipe(encoder.OutputStream, destination);
-            encoderToDestination.Start();
+            var encoderToDestination =
+                encoder.OutputStream
+                       .CopyToAsync(destination, bufferSize, cancellationToken)
+                       .ContinueWith(t => destination.Close());
 
-            // And now we wait until everything's stopped...
-            var waitHandles = new[]
-                {
-                    cancel.WaitHandle,
-                    decoderExited,
-                    encoderExited
-                };
-
-            int pending = 2;
-            while (pending != 0)
-            {
-                var signal = WaitHandle.WaitAny(waitHandles);
-                switch (signal)
-                {
-                    case 0: // timeout/cancel
+            Task.WhenAll(sourceToDecoderTask, decoderTask, decoderToEncoderTask, encoderTask, encoderToDestination)
+                .ContinueWith(t =>
+                    {
+                        if (t.IsCanceled || t.IsFaulted)
                         {
-                            sourceToDecoder.Abort();
-                            decoder.Abort();
-                            decoderToEncoder.Abort();
-                            encoder.Abort();
-                            encoderToDestination.Abort();
+                            Console.WriteLine("Deleting '{0}'.", destinationFileName);
+                            File.Delete(destinationFileName);
                         }
-                        break;
-
-                    case 1: // decoder exited.
-                        {
-                            // TODO: If the decoder has quit -- it should stop the connection?
-                            decoderToEncoder.Stop();
-                            decoderExited.Reset();
-                            --pending;
-                        }
-                        break;
-
-                    case 2: // encoder exited.
-                        {
-                            encoderToDestination.Stop();
-                            encoderExited.Reset();
-                            --pending;
-                        }
-                        break;
-                }
-            }
-
-            // TODO: What if the codec failed?
-            // TODO: Flush error output.
+                    })
+                .Wait();
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ConvertMusic
 {
@@ -15,16 +17,6 @@ namespace ConvertMusic
                     StartInfo = GetProcessStartInfo(fileName, arguments),
                     EnableRaisingEvents = true
                 };
-
-            // Hook up the events. We don't hook up OutputDataReceived, because that wants to treat the data as strings; we need binary.
-            _process.ErrorDataReceived += (sender, e) => OnErrorDataReceived(e);
-            _process.Exited += (sender, e) =>
-                {
-                    _process.WaitForExit(1000);
-                    _process.StandardOutput.Close();
-
-                    OnExited();
-                };
         }
 
         public Stream InputStream
@@ -37,11 +29,31 @@ namespace ConvertMusic
             get { return _process.StandardOutput.BaseStream; }
         }
 
-        public void Start()
+        public Task Start(CancellationToken cancellationToken)
         {
+            var completion = new TaskCompletionSource<bool>();
+            cancellationToken.Register(() => _process.Kill());
+
+            // Hook up the events. We don't hook up OutputDataReceived, because that wants to treat the data as strings; we need binary.
+            _process.ErrorDataReceived += (sender, e) => OnErrorDataReceived(e);
+            _process.Exited += (sender, e) =>
+            {
+                _process.WaitForExit(1000);
+                _process.StandardOutput.Close();
+
+                if (_process.ExitCode == 0)
+                    completion.SetResult(true);
+                else if (cancellationToken.IsCancellationRequested)
+                    completion.SetCanceled();
+                else
+                    completion.SetException(new CodecProcessFailedException(_process.ExitCode));
+            };
+
             _process.Start();
             _process.PriorityClass = ProcessPriorityClass.BelowNormal;
             _process.BeginErrorReadLine();
+
+            return completion.Task;
         }
 
         private static ProcessStartInfo GetProcessStartInfo(string fileName, string arguments)
@@ -68,15 +80,6 @@ namespace ConvertMusic
                 };
         }
 
-        public event EventHandler Exited;
-
-        private void OnExited()
-        {
-            EventHandler handler = Exited;
-            if (handler != null)
-                handler(this, EventArgs.Empty);
-        }
-
         public event DataReceivedEventHandler ErrorDataReceived;
 
         private void OnErrorDataReceived(DataReceivedEventArgs e)
@@ -90,6 +93,13 @@ namespace ConvertMusic
         {
             _process.Kill();
             _process.WaitForExit(1000);
+        }
+    }
+
+    internal class CodecProcessFailedException : Exception
+    {
+        public CodecProcessFailedException(int exitCode)
+        {
         }
     }
 }
