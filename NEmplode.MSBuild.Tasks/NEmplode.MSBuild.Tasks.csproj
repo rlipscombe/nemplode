@@ -45,7 +45,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConvertMusic.cs" />
     <Compile Include="CopyMediaTags.cs" />
     <Compile Include="ExecProcess.cs" />
     <Compile Include="Pipe.cs" />
@@ -61,6 +60,7 @@
     </None>
     <None Include="Media.targets">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </None>
   </ItemGroup>
   <ItemGroup>
