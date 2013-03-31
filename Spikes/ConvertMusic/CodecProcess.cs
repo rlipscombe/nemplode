@@ -32,10 +32,10 @@ namespace ConvertMusic
         public Task Start(CancellationToken cancellationToken)
         {
             var completion = new TaskCompletionSource<bool>();
-            cancellationToken.Register(() => _process.Kill());
+            cancellationToken.Register(() => ProcessExtensions.Terminate(_process));
 
             // Hook up the events. We don't hook up OutputDataReceived, because that wants to treat the data as strings; we need binary.
-            _process.ErrorDataReceived += (sender, e) => OnErrorDataReceived(e);
+            _process.ErrorDataReceived += (sender, e) => OnErrorDataReceived(new ErrorDataReceivedEventArgs(e.Data));
             _process.Exited += (sender, e) =>
             {
                 _process.WaitForExit(1000);
@@ -80,26 +80,52 @@ namespace ConvertMusic
                 };
         }
 
-        public event DataReceivedEventHandler ErrorDataReceived;
+        public Func<ErrorDataReceivedEventArgs, ErrorDataReceivedEventArgs> ErrorDataFilter { get; set; }
 
-        private void OnErrorDataReceived(DataReceivedEventArgs e)
+        public event ErrorDataReceivedEventHandler ErrorDataReceived;
+
+        private void OnErrorDataReceived(ErrorDataReceivedEventArgs e)
         {
-            DataReceivedEventHandler handler = ErrorDataReceived;
+            if (ErrorDataFilter != null)
+                e = ErrorDataFilter(e);
+            
+            if (e == null)
+                return;
+
+            ErrorDataReceivedEventHandler handler = ErrorDataReceived;
             if (handler != null)
                 handler(this, e);
         }
 
-        public void Abort()
+        public static ErrorDataReceivedEventArgs FlacErrorDataFilter(ErrorDataReceivedEventArgs e)
         {
-            _process.Kill();
-            _process.WaitForExit(1000);
+            if (e == null || string.IsNullOrWhiteSpace(e.Data))
+                return null;
+
+            if (e.Data.StartsWith("-: "))
+                return new ErrorDataReceivedEventArgs(e.Data.Substring(3));
+
+            return e;
+        }
+
+        public static ErrorDataReceivedEventArgs LameErrorDataFilter(ErrorDataReceivedEventArgs e)
+        {
+            if (e == null || string.IsNullOrWhiteSpace(e.Data))
+                return null;
+
+            return e;
         }
     }
 
-    internal class CodecProcessFailedException : Exception
+    public delegate void ErrorDataReceivedEventHandler(object sender, ErrorDataReceivedEventArgs e);
+
+    public class ErrorDataReceivedEventArgs
     {
-        public CodecProcessFailedException(int exitCode)
+        public ErrorDataReceivedEventArgs(string data)
         {
+            Data = data;
         }
+
+        public string Data { get; private set; }
     }
 }

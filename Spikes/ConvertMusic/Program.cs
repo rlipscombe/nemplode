@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Configuration;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,14 +11,15 @@ namespace ConvertMusic
     {
         private static void Main(string[] args)
         {
+            var rand = new Random();
+
             if (args.Length != 2)
             {
-                Console.WriteLine("ConvertMusic source-file destination-file");
+                Console.WriteLine("ConvertMusic source-root destination-root");
             }
 
-            // This ain't that simple, since MSBuild will insist on calling us with OEM code page filenames.
-            string sourceFileName = args[0];
-            string destinationFileName = args[1];
+            string sourceRoot = args[0];
+            string destinationRoot = args[1];
 
             var cancellationTokenSource = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, e) =>
@@ -27,61 +29,38 @@ namespace ConvertMusic
                     e.Cancel = true;
                 };
 
-            Transcoder.Convert(sourceFileName, destinationFileName, cancellationTokenSource.Token);
-        }
-    }
-
-    internal static class Transcoder
-    {
-        public static void Convert(string sourceFileName, string destinationFileName, CancellationToken cancellationToken)
-        {
-            // TODO: Have a registry for these, and some content negotiation.
-            string decoderPath = ConfigurationManager.AppSettings["DecoderPath"];
-            string decoderArguments = ConfigurationManager.AppSettings["DecoderArguments"];
-
-            string encoderPath = ConfigurationManager.AppSettings["EncoderPath"];
-            string encoderArguments = ConfigurationManager.AppSettings["EncoderArguments"];
-
-            // Wire a graph together.
-            var source = File.OpenRead(sourceFileName);
-            var decoder = new CodecProcess(decoderPath, decoderArguments);
-            var encoder = new CodecProcess(encoderPath, encoderArguments);
-            var destination = File.Create(destinationFileName);
-
-            const int bufferSize = 16384;
-
-            decoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
-            var decoderTask = decoder.Start(cancellationToken);
-
-            // Note that the process has to be started before you can get the stream,
-            // otherwise you get InvalidOperationException containing "StandardIn has not been redirected.".
-            var sourceToDecoderTask =
-                source.CopyToAsync(decoder.InputStream, bufferSize, cancellationToken)
-                      .ContinueWith(t => decoder.InputStream.Close());
-
-            encoder.ErrorDataReceived += (sender, e) => { Console.WriteLine(e.Data); };
-            var encoderTask = encoder.Start(cancellationToken);
-
-            var decoderToEncoderTask =
-                decoder.OutputStream
-                       .CopyToAsync(encoder.InputStream, bufferSize, cancellationToken)
-                       .ContinueWith(t => encoder.InputStream.Close());
-
-            var encoderToDestination =
-                encoder.OutputStream
-                       .CopyToAsync(destination, bufferSize, cancellationToken)
-                       .ContinueWith(t => destination.Close());
-
-            Task.WhenAll(sourceToDecoderTask, decoderTask, decoderToEncoderTask, encoderTask, encoderToDestination)
-                .ContinueWith(t =>
+            var sourceFiles = Directory.EnumerateFiles(sourceRoot, "*.flac", SearchOption.AllDirectories);
+            int maxDegreeOfParallelism = Environment.ProcessorCount;
+            using (var pending = new SemaphoreSlim(maxDegreeOfParallelism))
+            {
+                var tasks = new SortedSet<Task>(new TaskComparer());
+                foreach (var sourceFile in sourceFiles)
                 {
-                    if (t.IsCanceled || t.IsFaulted)
-                    {
-                        Console.WriteLine("Deleting '{0}'.", destinationFileName);
-                        File.Delete(destinationFileName);
-                    }
-                })
-                .Wait();
+                    if (cancellationTokenSource.IsCancellationRequested)
+                        break;
+
+                    // Wait until there's a core available.
+                    pending.Wait();
+
+                    // There's a core available: start a transcode job.
+                    var sourceFileName = sourceFile;
+                    var destinationFileName = Path.ChangeExtension(sourceFileName, ".mp3");
+                    var task = Transcoder.ConvertAsync(sourceFileName, destinationFileName, cancellationTokenSource.Token);
+                    tasks.Add(task);
+                    task.ContinueWith(t =>
+                        {
+                            if (!t.IsFaulted && !t.IsCanceled)
+                                Console.WriteLine("Converted '{0}' to '{1}'.", sourceFileName, destinationFileName);
+
+                            // ReSharper disable AccessToDisposedClosure -- We'll block on the remaining tasks before we dispose of 'pending'.
+                            tasks.Remove(t);
+                            pending.Release();
+                            // ReSharper restore AccessToDisposedClosure
+                        });
+                }
+
+                Task.WaitAll(tasks.ToArray());
+            }
         }
     }
 }

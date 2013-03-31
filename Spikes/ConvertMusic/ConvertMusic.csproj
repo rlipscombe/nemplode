@@ -43,8 +43,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CodecProcess.cs" />
+    <Compile Include="CodecProcessFailedException.cs" />
+    <Compile Include="ProcessExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TaskComparer.cs" />
+    <Compile Include="Transcoder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
