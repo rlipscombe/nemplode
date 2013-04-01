@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,8 +30,10 @@ namespace ConvertMusic
                     e.Cancel = true;
                 };
 
-            var sourceFiles = Directory.EnumerateFiles(sourceRoot, "*.flac", SearchOption.AllDirectories);
             int maxDegreeOfParallelism = Environment.ProcessorCount;
+
+            // TODO: We need a recursive search that allows cancellation. Obviously, throwing OperationCanceledException works, but...
+            var sourceFiles = Directory.EnumerateFiles(sourceRoot, "*.flac", SearchOption.AllDirectories);
             using (var pending = new SemaphoreSlim(maxDegreeOfParallelism))
             {
                 var tasks = new SortedSet<Task>(new TaskComparer());
