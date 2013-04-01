@@ -25,6 +25,7 @@ namespace ConvertMusic
                 {
                     ErrorDataFilter = CodecProcess.FlacErrorDataFilter
                 };
+            // BUG: The encoder (LAME) needs to write to a temporary file, otherwise we get no VBR header.
             var encoder = new CodecProcess(encoderPath, encoderArguments)
                 {
                     ErrorDataFilter = CodecProcess.LameErrorDataFilter
@@ -55,16 +56,21 @@ namespace ConvertMusic
                        .CopyToAsync(destination, bufferSize, cancellationToken)
                        .ContinueWith(t => destination.Close());
 
-            return Task.WhenAll(sourceToDecoderTask, decoderTask, decoderToEncoderTask, encoderTask,
-                                encoderToDestination)
-                       .ContinueWith(t =>
-                           {
-                               if (t.IsCanceled || t.IsFaulted)
-                               {
-                                   Console.WriteLine("Deleting '{0}'.", destinationFileName);
-                                   File.Delete(destinationFileName);
-                               }
-                           });
+            // We need to propagate the cancelation/exception; use a TCS.
+            var completion = new TaskCompletionSource<bool>();
+            Task.WhenAll(sourceToDecoderTask, decoderTask, decoderToEncoderTask, encoderTask, encoderToDestination)
+                .ContinueWith(t =>
+                    {
+                        if (t.IsCanceled || t.IsFaulted)
+                        {
+                            Console.WriteLine("Deleting '{0}'.", destinationFileName);
+                            File.Delete(destinationFileName);
+                        }
+
+                        completion.SetFromTask(t);
+                    });
+
+            return completion.Task;
         }
     }
 }
