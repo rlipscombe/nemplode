@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NEmplode
 {
-    internal sealed class CodecProcess
+    internal sealed class CodecProcess : IMediaCodec
     {
         private readonly Process _process;
 

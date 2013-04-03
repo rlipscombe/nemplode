@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Configuration;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,17 +11,10 @@ namespace NEmplode
                                         string destinationFileName,
                                         CancellationToken cancellationToken)
         {
-            var decoderFileName = ConfigurationManager.AppSettings["DecoderPath"];
-            var decoderArguments = ConfigurationManager.AppSettings["DecoderArguments"];
-            var encoderFileName = ConfigurationManager.AppSettings["EncoderPath"];
-            var encoderArguments = ConfigurationManager.AppSettings["EncoderArguments"];
-
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
-            var decoder =
-                new CodecProcess(decoderFileName, decoderArguments) {ErrorDataFilter = CodecProcess.FlacErrorDataFilter};
-            var encoder =
-                new CodecProcess(encoderFileName, encoderArguments) {ErrorDataFilter = CodecProcess.LameErrorDataFilter};
+            var decoder = CodecFactory.CreateDecoder(sourceFileName);
+            var encoder = CodecFactory.CreateEncoder(destinationFileName);
             var destination = File.Create(destinationFileName);
 
             const int bufferSize = 16384;
