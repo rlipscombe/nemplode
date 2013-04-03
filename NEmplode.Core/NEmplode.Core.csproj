@@ -47,13 +47,17 @@
   <ItemGroup>
     <Compile Include="CodecFactory.cs" />
     <Compile Include="CodecNotRegisteredException.cs" />
+    <Compile Include="DecoderNotRegisteredException.cs" />
     <Compile Include="CodecProcess.cs" />
     <Compile Include="CodecProcessFailedException.cs" />
     <Compile Include="Concurrent.cs" />
+    <Compile Include="DelayedOutputStream.cs" />
+    <Compile Include="EncoderNotRegisteredException.cs" />
     <Compile Include="ErrorDataReceivedEventArgs.cs" />
     <Compile Include="ErrorDataReceivedEventHandler.cs" />
     <Compile Include="FlacDecoderFactory.cs" />
     <Compile Include="IMediaCodec.cs" />
+    <Compile Include="LameEncoder.cs" />
     <Compile Include="Mp3EncoderFactory.cs" />
     <Compile Include="ProcessExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
