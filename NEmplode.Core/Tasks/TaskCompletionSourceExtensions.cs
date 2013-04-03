@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace NEmplode
+namespace NEmplode.Tasks
 {
     internal static class TaskCompletionSourceExtensions
     {

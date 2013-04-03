@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using NEmplode;
+using NEmplode.Tasks;
 using TagLib;
 using TagLib.Id3v2;
 using TagLib.Ogg;

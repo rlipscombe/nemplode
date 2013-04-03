@@ -1,6 +1,6 @@
 ﻿using System.Configuration;
 
-namespace NEmplode
+namespace NEmplode.Codecs
 {
     internal class Mp3EncoderFactory
     {

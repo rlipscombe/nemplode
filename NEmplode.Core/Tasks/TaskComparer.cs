@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace NEmplode
+namespace NEmplode.Tasks
 {
     internal class TaskComparer : IComparer<Task>
     {

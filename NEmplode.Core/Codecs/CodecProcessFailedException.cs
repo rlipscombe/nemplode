@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NEmplode
+namespace NEmplode.Codecs
 {
     internal class CodecProcessFailedException : Exception
     {

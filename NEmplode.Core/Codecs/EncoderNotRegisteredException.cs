@@ -1,4 +1,4 @@
-﻿namespace NEmplode
+﻿namespace NEmplode.Codecs
 {
     internal class EncoderNotRegisteredException : CodecNotRegisteredException
     {

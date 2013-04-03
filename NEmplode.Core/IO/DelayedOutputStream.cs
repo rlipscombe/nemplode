@@ -2,8 +2,9 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using NEmplode.Tasks;
 
-namespace NEmplode
+namespace NEmplode.IO
 {
     internal class DelayedOutputStream : Stream
     {

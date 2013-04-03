@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NEmplode
+namespace NEmplode.Codecs
 {
     internal interface IMediaCodec
     {

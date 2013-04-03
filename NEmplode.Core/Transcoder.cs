@@ -2,6 +2,8 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using NEmplode.Codecs;
+using NEmplode.Tasks;
 
 namespace NEmplode
 {

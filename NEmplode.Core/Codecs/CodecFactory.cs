@@ -1,7 +1,7 @@
 ﻿using System.Configuration;
 using System.IO;
 
-namespace NEmplode
+namespace NEmplode.Codecs
 {
     internal static class CodecFactory
     {

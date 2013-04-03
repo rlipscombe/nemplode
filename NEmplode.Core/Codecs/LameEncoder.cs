@@ -1,8 +1,9 @@
 ﻿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using NEmplode.IO;
 
-namespace NEmplode
+namespace NEmplode.Codecs
 {
     internal class LameEncoder : IMediaCodec
     {

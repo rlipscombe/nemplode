@@ -1,4 +1,4 @@
-﻿namespace NEmplode
+﻿namespace NEmplode.Codecs
 {
     public class ErrorDataReceivedEventArgs
     {
@@ -9,4 +9,6 @@
 
         public string Data { get; private set; }
     }
+
+    public delegate void ErrorDataReceivedEventHandler(object sender, ErrorDataReceivedEventArgs e);
 }
