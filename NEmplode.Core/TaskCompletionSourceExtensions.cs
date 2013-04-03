@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace ConvertMusic
+namespace NEmplode
 {
     internal static class TaskCompletionSourceExtensions
     {

@@ -4,32 +4,23 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ConvertMusic
+namespace NEmplode
 {
-    internal static class Transcoder
+    public static class Transcoder
     {
         public static Task ConvertAsync(string sourceFileName,
                                         string destinationFileName,
                                         CancellationToken cancellationToken)
         {
-            // TODO: Have a registry for these, and some content negotiation.
-            string decoderPath = ConfigurationManager.AppSettings["DecoderPath"];
-            string decoderArguments = ConfigurationManager.AppSettings["DecoderArguments"];
-
-            string encoderPath = ConfigurationManager.AppSettings["EncoderPath"];
-            string encoderArguments = ConfigurationManager.AppSettings["EncoderArguments"];
+            var decoderFileName = ConfigurationManager.AppSettings["DecoderPath"];
+            var decoderArguments = ConfigurationManager.AppSettings["DecoderArguments"];
+            var encoderFileName = ConfigurationManager.AppSettings["EncoderPath"];
+            var encoderArguments = ConfigurationManager.AppSettings["EncoderArguments"];
 
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
-            var decoder = new CodecProcess(decoderPath, decoderArguments)
-                {
-                    ErrorDataFilter = CodecProcess.FlacErrorDataFilter
-                };
-            // BUG: The encoder (LAME) needs to write to a temporary file, otherwise we get no VBR header.
-            var encoder = new CodecProcess(encoderPath, encoderArguments)
-                {
-                    ErrorDataFilter = CodecProcess.LameErrorDataFilter
-                };
+            var decoder = new CodecProcess(decoderFileName, decoderArguments);
+            var encoder = new CodecProcess(encoderFileName, encoderArguments);
             var destination = File.Create(destinationFileName);
 
             const int bufferSize = 16384;

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ConvertMusic
+namespace NEmplode
 {
-    internal static class Concurrent
+    public static class Concurrent
     {
         public static void ForEach<T>(IEnumerable<T> source, int maxDegreeOfParallelism, CancellationToken cancellationToken, Func<T, Task> factory)
         {

@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ConvertMusic
+namespace NEmplode
 {
     internal sealed class CodecProcess
     {
@@ -115,17 +115,5 @@ namespace ConvertMusic
 
             return e;
         }
-    }
-
-    public delegate void ErrorDataReceivedEventHandler(object sender, ErrorDataReceivedEventArgs e);
-
-    public class ErrorDataReceivedEventArgs
-    {
-        public ErrorDataReceivedEventArgs(string data)
-        {
-            Data = data;
-        }
-
-        public string Data { get; private set; }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ConvertMusic
+namespace NEmplode
 {
     internal class CodecProcessFailedException : Exception
     {

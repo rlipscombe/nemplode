@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace ConvertMusic
+namespace NEmplode
 {
     internal static class ProcessExtensions
     {
