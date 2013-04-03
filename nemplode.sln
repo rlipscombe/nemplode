@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyTags", "Spikes\CopyTags
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NEmplode.Core", "NEmplode.Core\NEmplode.Core.csproj", "{8D8F8B82-6372-46AF-86CA-50624D45FA3C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EncodeMusic", "Spikes\EncodeMusic\EncodeMusic.csproj", "{F298C04A-8335-49D7-A574-651C233C0F94}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{8D8F8B82-6372-46AF-86CA-50624D45FA3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D8F8B82-6372-46AF-86CA-50624D45FA3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D8F8B82-6372-46AF-86CA-50624D45FA3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F298C04A-8335-49D7-A574-651C233C0F94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F298C04A-8335-49D7-A574-651C233C0F94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F298C04A-8335-49D7-A574-651C233C0F94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F298C04A-8335-49D7-A574-651C233C0F94}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -46,5 +52,6 @@ Global
 		{D45B3BCD-731E-4755-9A1C-06F9D39D8019} = {ED465445-5BDF-4D53-A3AF-540891421949}
 		{9473B6A5-57F3-4EE0-A0EC-532FCF0014AB} = {ED465445-5BDF-4D53-A3AF-540891421949}
 		{5C53E421-5172-41F2-8CF9-41F3721341F2} = {ED465445-5BDF-4D53-A3AF-540891421949}
+		{F298C04A-8335-49D7-A574-651C233C0F94} = {ED465445-5BDF-4D53-A3AF-540891421949}
 	EndGlobalSection
 EndGlobal

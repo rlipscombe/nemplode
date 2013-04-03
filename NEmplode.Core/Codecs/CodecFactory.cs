@@ -15,7 +15,7 @@ namespace NEmplode.Codecs
 
             if (extension.ToLowerInvariant() == ".flac")
             {
-                var decoderFileName = ConfigurationManager.AppSettings["DecoderPath"];
+                var decoderFileName = ConfigurationManager.AppSettings["FlacPath"];
                 const string decoderArguments = @"--silent --decode --stdout -";
 
                 return new CodecProcess(decoderFileName, decoderArguments)
@@ -34,13 +34,17 @@ namespace NEmplode.Codecs
             {
                 throw new EncoderNotRegisteredException(destinationFileName);
             }
-            
+
             if (extension.ToLowerInvariant() == ".mp3")
             {
-                var encoderFileName = ConfigurationManager.AppSettings["EncoderPath"];
-
-                // Now for the fun part: LAME requires an actual file to write to, in order to have somewhere to put the VBR TOC.
+                var encoderFileName = ConfigurationManager.AppSettings["LamePath"];
                 return new LameEncoder(encoderFileName);
+            }
+
+            if (extension.ToLowerInvariant() == ".flac")
+            {
+                var encoderFileName = ConfigurationManager.AppSettings["FlacPath"];
+                return new FlacEncoder(encoderFileName);
             }
 
             throw new EncoderNotRegisteredException(destinationFileName);
