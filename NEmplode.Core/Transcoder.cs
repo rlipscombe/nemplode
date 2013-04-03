@@ -19,8 +19,10 @@ namespace NEmplode
 
             // Wire a graph together.
             var source = File.OpenRead(sourceFileName);
-            var decoder = new CodecProcess(decoderFileName, decoderArguments);
-            var encoder = new CodecProcess(encoderFileName, encoderArguments);
+            var decoder =
+                new CodecProcess(decoderFileName, decoderArguments) {ErrorDataFilter = CodecProcess.FlacErrorDataFilter};
+            var encoder =
+                new CodecProcess(encoderFileName, encoderArguments) {ErrorDataFilter = CodecProcess.LameErrorDataFilter};
             var destination = File.Create(destinationFileName);
 
             const int bufferSize = 16384;
