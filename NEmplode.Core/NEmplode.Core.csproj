@@ -58,6 +58,8 @@
     <Compile Include="Codecs\CodecProcessFailedException.cs" />
     <Compile Include="Codecs\EncoderProcessWithTemporaryFile.cs" />
     <Compile Include="Codecs\FlacEncoder.cs" />
+    <Compile Include="IO\PathExtensions.cs" />
+    <Compile Include="Linq\EnumerableExtensions.cs" />
     <Compile Include="Tagging\TagCopier.cs" />
     <Compile Include="Tasks\Concurrent.cs" />
     <Compile Include="IO\DelayedOutputStream.cs" />
