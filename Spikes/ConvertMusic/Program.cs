@@ -17,6 +17,7 @@ namespace ConvertMusic
             if (args.Length != 2)
             {
                 Console.WriteLine("ConvertMusic source-root destination-root");
+                return;
             }
 
             string sourceRoot = Path.GetFullPath(args[0]);

@@ -3,7 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DAC7B621-8178-4949-A4D0-7A8902D16AF8}"
 	ProjectSection(SolutionItems) = preProject
-		nemplode.build = nemplode.build
 		README.md = README.md
 	EndProjectSection
 EndProject

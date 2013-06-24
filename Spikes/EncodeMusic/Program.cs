@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using NEmplode;
+using NEmplode.IO;
 using NEmplode.Tagging;
 using NEmplode.Tasks;
 
@@ -14,6 +16,7 @@ namespace EncodeMusic
             if (args.Length != 2)
             {
                 Console.WriteLine("EncodeMusic source-root destination-root");
+                return;
             }
 
             string sourceRoot = args[0];
@@ -29,18 +32,36 @@ namespace EncodeMusic
 
             int maxDegreeOfParallelism = Environment.ProcessorCount;
 
-            var sourceFiles = Directory.EnumerateFiles(sourceRoot, "*.wav", SearchOption.AllDirectories);
-            Concurrent.ForEach(sourceFiles, maxDegreeOfParallelism, cancellationTokenSource.Token, sourceFileName =>
+            const string sourcePattern = "*.wav";
+            var sourceFiles = Directory.EnumerateFiles(sourceRoot, sourcePattern, SearchOption.AllDirectories);
+            var actions = sourceFiles
+                .Select(sourceFileName =>
+                {
+                    var relativePath =
+                        PathExtensions.GetRelativePath(sourceRoot, sourceFileName);
+                    var destinationFileName =
+                        Path.ChangeExtension(Path.Combine(destinationRoot, relativePath), ".flac");
+
+                    return
+                        new
+                        {
+                            SourceFileName = sourceFileName,
+                            DestinationFileName = destinationFileName,
+                        };
+                });
+
+            Concurrent.ForEach(actions, maxDegreeOfParallelism, cancellationTokenSource.Token, action =>
             {
-                // TODO: This is not how to figure out the destination.
-                var destinationFileName = Path.ChangeExtension(sourceFileName, ".flac");
+                var sourceFileName = action.SourceFileName;
+                var destinationFileName = action.DestinationFileName;
+
+                Console.WriteLine("Converting '{0}'", sourceFileName);
+                Console.WriteLine("        to '{0}'", destinationFileName);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationFileName));
+
                 return
-                    Transcoder.EncodeAsync(sourceFileName, destinationFileName, cancellationTokenSource.Token)
-                              .ContinueWith(t =>
-                              {
-                                  if (!t.IsFaulted && !t.IsCanceled)
-                                      TagCopier.CopyTags(sourceFileName, destinationFileName);
-                              });
+                    Transcoder.EncodeAsync(sourceFileName, destinationFileName, cancellationTokenSource.Token);
             });
         }
     }

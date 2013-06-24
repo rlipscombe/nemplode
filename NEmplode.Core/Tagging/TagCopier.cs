@@ -21,9 +21,11 @@ namespace NEmplode.Tagging
 
                 CopyTag(sourceTag, "TITLE", destinationTag, "TIT2");
                 CopyTag(sourceTag, "ARTIST", destinationTag, "TPE1");
-                CopyTag(sourceTag, "ALBUM", destinationTag, "TALB");
 
                 CopyTrackNumberTag(sourceTag, destinationTag);
+                var discNumberTag = CopyDiscNumberTag(sourceTag, destinationTag);
+
+                CopyAlbumTag(sourceTag, "ALBUM", discNumberTag, destinationTag, "TALB");
 
                 // TDOR <- Year / TDRC <- yyyy-MM-dd
                 var date = sourceTag.GetFirstField("DATE");
@@ -52,8 +54,6 @@ namespace NEmplode.Tagging
                 CopyCommentTags(sourceTag, destinationTag);
 
                 CopyTag(sourceTag, "COMPILATION", destinationTag, "TCMP");
-
-                CopyDiscNumberTag(sourceTag, destinationTag);
 
                 // The next two are from lastfmplus.
                 CopyTag(sourceTag, "GENRE", destinationTag, "TCON");
@@ -96,6 +96,29 @@ namespace NEmplode.Tagging
             }
         }
 
+        private static void CopyAlbumTag(XiphComment sourceTag, string sourceKey, string discNumberTag, Tag destinationTag, string destinationKey)
+        {
+            var sourceValue = sourceTag.GetFirstField(sourceKey);
+            if (string.IsNullOrEmpty(sourceValue))
+                return;
+
+            // If this is part of a set, include the disc number in the album title.
+            // I'm assuming that for multi-disc sets, TPOS will be (e.g.) "1/3" or "1". If it's empty or "1/1", assume a single disc.
+            var albumValue = sourceValue;
+            if (!string.IsNullOrWhiteSpace(discNumberTag))
+            {
+                var parts = discNumberTag.Split('/');
+
+                // Is there only one disc in the set?
+                if (parts.Length > 1 && parts[1] != "1")
+                    albumValue += String.Format(" - Disc {0}", parts[0]);
+            }
+
+            var destinationFrame = TextInformationFrame.Get(destinationTag, destinationKey, create: true);
+            destinationFrame.Text = new[] {albumValue};
+            destinationTag.AddFrame(destinationFrame);
+        }
+
         private static void CreateWindowsMediaTag(string value, Tag destinationTag, string owner)
         {
             var frame = PrivateFrame.Get(destinationTag, owner, create: true);
@@ -135,14 +158,14 @@ namespace NEmplode.Tagging
             CopyUserTextTag(sourceTag, sourceKey, destinationTag, destinationDescription);
         }
 
-        private static void CopyTrackNumberTag(XiphComment sourceTag, Tag destinationTag)
+        private static string CopyTrackNumberTag(XiphComment sourceTag, Tag destinationTag)
         {
-            CopyTrackOrDiscNumberTag(sourceTag, "TRACKNUMBER", "TRACKTOTAL", "TOTALTRACKS", destinationTag, "TRCK");
+            return CopyTrackOrDiscNumberTag(sourceTag, "TRACKNUMBER", "TRACKTOTAL", "TOTALTRACKS", destinationTag, "TRCK");
         }
 
-        private static void CopyDiscNumberTag(XiphComment sourceTag, Tag destinationTag)
+        private static string CopyDiscNumberTag(XiphComment sourceTag, Tag destinationTag)
         {
-            CopyTrackOrDiscNumberTag(sourceTag, "DISCNUMBER", "DISCTOTAL", "TOTALDISCS", destinationTag, "TPOS");
+            return CopyTrackOrDiscNumberTag(sourceTag, "DISCNUMBER", "DISCTOTAL", "TOTALDISCS", destinationTag, "TPOS");
         }
 
         /// <summary>
@@ -151,9 +174,13 @@ namespace NEmplode.Tagging
         /// <remarks>
         /// The source FLAC file has two standards for denoting the total count, so we look for both. The total is also optional.
         /// </remarks>
-        private static void CopyTrackOrDiscNumberTag(XiphComment sourceTag, string numberKey, string totalKey, string totalKeyAlt, Tag destinationTag, string destinationKey)
+        private static string CopyTrackOrDiscNumberTag(XiphComment sourceTag,
+                                                     string numberKey,
+                                                     string totalKey,
+                                                     string totalKeyAlt,
+                                                     Tag destinationTag,
+                                                     string destinationKey)
         {
-            var destinationFrame = TextInformationFrame.Get(destinationTag, destinationKey, create: true);
             var number = sourceTag.GetFirstField(numberKey);
             if (!String.IsNullOrWhiteSpace(number))
             {
@@ -161,13 +188,20 @@ namespace NEmplode.Tagging
                 if (String.IsNullOrWhiteSpace(total))
                     total = sourceTag.GetFirstField(totalKeyAlt);
 
+                string result;
                 if (!String.IsNullOrWhiteSpace(total))
-                    destinationFrame.Text = new[] { String.Format("{0}/{1}", number, total) };
+                    result = String.Format("{0}/{1}", number, total);
                 else
-                    destinationFrame.Text = new[] { number };
+                    result = number;
+
+                var destinationFrame = TextInformationFrame.Get(destinationTag, destinationKey, create: true);
+                destinationFrame.Text = new[] {result};
+                destinationTag.AddFrame(destinationFrame);
+
+                return result;
             }
 
-            destinationTag.AddFrame(destinationFrame);
+            return null;
         }
 
         private static void CopyCommentTags(XiphComment sourceTag, Tag destinationTag)
