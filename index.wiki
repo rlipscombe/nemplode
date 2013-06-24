@@ -1,0 +1,24 @@
+= NEmplode =
+
+Caveats:
+
+ * The empeg allows a child item to appear multiple times in a given parent.
+ * These are _not_ symlinks; they're sorta hard links.
+ * They are not allowed to have different names -- the link is by FID, not by (name, FID).
+
+Milestone 1:
+
+ * [X] Display a list of all the tunes and playlists on a player.
+ * [X] Recursively display the playlists and tunes on a player.
+ * [X] Actually talk to a real player. Using Hijack.
+ * [ ] Delete a playlist, including all of the content.
+ * [ ] Write that back to the player.
+ * [ ] Upload a new item; attach it to an arbitrary playlist.
+
+Not Scheduled:
+ 
+ * [ ] Editing config.ini settings.
+ * [ ] Ability to change playlist order.
+ * [ ] Editing playlist settings (pickn, etc.)
+ * [ ] Time synchronisation -- somehow. FTP SITE EXEC, maybe?
+ * [ ] Don't forget to update the seq_num in the config.ini file.
